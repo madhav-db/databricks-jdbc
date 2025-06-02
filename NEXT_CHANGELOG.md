@@ -3,6 +3,7 @@
 ## [Unreleased]
 
 ### Added
+- Added support for DoD (.mil) domains
 - Support to fetch metadata in PreparedStatement for SELECT queries before executing the query.
 
 ### Updated
