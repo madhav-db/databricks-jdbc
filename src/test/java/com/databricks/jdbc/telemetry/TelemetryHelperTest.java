@@ -5,6 +5,8 @@ import static com.databricks.jdbc.TestConstants.WAREHOUSE_COMPUTE;
 import static com.databricks.jdbc.common.safe.FeatureFlagTestUtil.enableFeatureFlagForTesting;
 import static com.databricks.jdbc.telemetry.TelemetryHelper.isTelemetryAllowedForConnection;
 import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.*;
 
 import com.databricks.jdbc.api.internal.IDatabricksConnectionContext;
@@ -80,6 +82,27 @@ public class TelemetryHelperTest {
   @Test
   void testGetDriverSystemConfigurationDoesNotThrowError() {
     assertDoesNotThrow(TelemetryHelper::getDriverSystemConfiguration);
+  }
+
+  @Test
+  void testUpdateClientAppName() {
+    // Set the client app name to null first to ensure a clean state
+    TelemetryHelper.updateClientAppName(null);
+
+    // Test valid app name
+    TelemetryHelper.updateClientAppName("TestApplicationName");
+    assertEquals(
+        "TestApplicationName", TelemetryHelper.getDriverSystemConfiguration().getClientAppName());
+
+    // Test empty app name - should not change the existing value
+    TelemetryHelper.updateClientAppName("");
+    assertEquals(
+        "TestApplicationName", TelemetryHelper.getDriverSystemConfiguration().getClientAppName());
+
+    // Test null app name - should not change the existing value
+    TelemetryHelper.updateClientAppName(null);
+    assertEquals(
+        "TestApplicationName", TelemetryHelper.getDriverSystemConfiguration().getClientAppName());
   }
 
   @Test
