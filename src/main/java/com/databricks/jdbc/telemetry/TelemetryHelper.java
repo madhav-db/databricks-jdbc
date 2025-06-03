@@ -8,7 +8,6 @@ import com.databricks.jdbc.common.safe.DatabricksDriverFeatureFlagsContextFactor
 import com.databricks.jdbc.common.util.DatabricksThreadContextHolder;
 import com.databricks.jdbc.common.util.DriverUtil;
 import com.databricks.jdbc.common.util.StringUtil;
-import com.databricks.jdbc.dbclient.impl.common.StatementId;
 import com.databricks.jdbc.exception.DatabricksParsingException;
 import com.databricks.jdbc.log.JdbcLogger;
 import com.databricks.jdbc.log.JdbcLoggerFactory;
@@ -64,7 +63,6 @@ public class TelemetryHelper {
             .isFeatureEnabled(TELEMETRY_FEATURE_FLAG_NAME);
   }
 
-  // TODO : add an export even before connection context is built
   public static void exportInitialTelemetryLog(IDatabricksConnectionContext connectionContext) {
     if (connectionContext == null) {
       return;
@@ -123,7 +121,8 @@ public class TelemetryHelper {
         DatabricksThreadContextHolder.getConnectionContext(),
         executionTime,
         executionEvent,
-        DatabricksThreadContextHolder.getStatementId());
+        DatabricksThreadContextHolder.getStatementId(),
+        DatabricksThreadContextHolder.getSessionId());
   }
 
   @VisibleForTesting
@@ -131,7 +130,8 @@ public class TelemetryHelper {
       IDatabricksConnectionContext connectionContext,
       long latencyMilliseconds,
       SqlExecutionEvent executionEvent,
-      StatementId statementId) {
+      String statementId,
+      String sessionId) {
     // Though we already handle null connectionContext in the downstream implementation,
     // we are adding this check for extra sanity
     if (connectionContext != null) {
@@ -139,10 +139,9 @@ public class TelemetryHelper {
           new TelemetryEvent()
               .setLatency(latencyMilliseconds)
               .setSqlOperation(executionEvent)
-              .setDriverConnectionParameters(getDriverConnectionParameter(connectionContext));
-      if (statementId != null) {
-        telemetryEvent.setSqlStatementId(statementId.toString());
-      }
+              .setDriverConnectionParameters(getDriverConnectionParameter(connectionContext))
+              .setSqlStatementId(statementId)
+              .setSessionId(sessionId);
       TelemetryFrontendLog telemetryFrontendLog =
           new TelemetryFrontendLog()
               .setFrontendLogEventId(getEventUUID())
