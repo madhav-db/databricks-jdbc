@@ -57,7 +57,7 @@ jobs:
       with:
         paths: |
           ${{ github.workspace }}/target/site/jacoco/jacoco.xml
-        token: ${{ secrets.GITHUB_TOKEN }}
+        token: ${{ secrets.COVERAGE_TOKEN }}
         min-coverage-overall: 85
         title: '📊 Code Coverage Report'
         update-comment: true
@@ -71,8 +71,8 @@ jobs:
       with:
         paths: |
           ${{ github.workspace }}/target/site/jacoco/jacoco.xml
-        token: ${{ secrets.GITHUB_TOKEN }}
-        min-coverage-overall: 0
+        token: ${{ secrets.COVERAGE_TOKEN }}
+        min-coverage-overall: 85
         min-coverage-changed-files: 0
         title: '📊 Code Coverage Report (SKIPPED: ${{ steps.override.outputs.reason }})'
         update-comment: true
