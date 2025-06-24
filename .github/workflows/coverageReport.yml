@@ -6,7 +6,7 @@ permissions:
   issues: write
 
 on:
-  pull_request:
+  pull_request_target:
 
 jobs:
   coverage:
@@ -24,18 +24,6 @@ jobs:
       with:
         java-version: '21'
         distribution: 'adopt'
-
-    - name: Debug token and environment
-      run: |
-        echo "Repository: ${{ github.repository }}"
-        echo "Event: ${{ github.event_name }}"
-        echo "Override value: '${{ steps.override.outputs.override }}'"
-        echo "COVERAGE_TOKEN exists: ${{ secrets.COVERAGE_TOKEN != '' }}"
-        echo "COVERAGE_TOKEN length: ${#COVERAGE_TOKEN}"
-        echo "GITHUB_TOKEN exists: ${{ secrets.GITHUB_TOKEN != '' }}"
-      env:
-        COVERAGE_TOKEN: ${{ secrets.COVERAGE_TOKEN }}
-      
         
     - name: Cache dependencies
       uses: actions/cache@v4
@@ -69,7 +57,7 @@ jobs:
       with:
         paths: |
           ${{ github.workspace }}/target/site/jacoco/jacoco.xml
-        token: ${{ secrets.COVERAGE_TOKEN }}
+        token: ${{ secrets.GITHUB_TOKEN }}
         min-coverage-overall: 85
         title: '📊 Code Coverage Report'
         update-comment: true
@@ -83,7 +71,7 @@ jobs:
       with:
         paths: |
           ${{ github.workspace }}/target/site/jacoco/jacoco.xml
-        token: ${{ secrets.COVERAGE_TOKEN }}
+        token: ${{ secrets.GITHUB_TOKEN }}
         min-coverage-overall: 85
         min-coverage-changed-files: 0
         title: '📊 Code Coverage Report (SKIPPED: ${{ steps.override.outputs.reason }})'
