@@ -485,16 +485,18 @@ public class ConfiguratorUtils {
       LOGGER.info("Successfully loaded trust store: " + trustStorePath);
       return trustStore;
     } catch (Exception e) {
-      StringBuilder errorMessage =
-          new StringBuilder()
-              .append("Failed to load trust store: ")
-              .append(trustStorePath)
-              .append(" with type ")
-              .append(trustStoreType);
+      String errorMessage;
       if (trustStoreProvider != null && !trustStoreProvider.isEmpty()) {
-        errorMessage.append(" and provider ").append(trustStoreProvider);
+        errorMessage =
+            String.format(
+                "Failed to load trust store: %s with type %s and provider %s: %s",
+                trustStorePath, trustStoreType, trustStoreProvider, e.getMessage());
+      } else {
+        errorMessage =
+            String.format(
+                "Failed to load trust store: %s with type %s: %s",
+                trustStorePath, trustStoreType, e.getMessage());
       }
-      errorMessage.append(": ").append(e.getMessage());
       LOGGER.error(errorMessage.toString());
       throw new DatabricksSSLException(
           errorMessage.toString(), e, DatabricksDriverErrorCode.SSL_HANDSHAKE_ERROR);

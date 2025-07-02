@@ -729,7 +729,7 @@ public class DatabricksConnectionContext implements IDatabricksConnectionContext
 
   @Override
   public String getSSLTrustStoreType() {
-    return getParameter(DatabricksJdbcUrlParams.SSL_TRUST_STORE_TYPE, "JKS");
+    return getParameter(DatabricksJdbcUrlParams.SSL_TRUST_STORE_TYPE);
   }
 
   @Override
