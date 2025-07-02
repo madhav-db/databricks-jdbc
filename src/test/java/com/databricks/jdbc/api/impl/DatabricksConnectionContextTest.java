@@ -601,5 +601,13 @@ class DatabricksConnectionContextTest {
     DatabricksConnectionContext connectionContext =
         (DatabricksConnectionContext) DatabricksConnectionContext.parse(validJdbcUrl, properties);
     assertNull(connectionContext.getSSLTrustStore());
+
+    // Test case 2: With truststore parameters
+    properties.put("SSLTrustStore", "/path/to/truststore.jks");
+    properties.put("SSLTrustStorePwd", "truststorepassword");
+    properties.put("SSLTrustStoreType", "PKCS12");
+    properties.put("SSLTrustStoreProvider", "SunJSSE");
+    connectionContext =
+        (DatabricksConnectionContext) DatabricksConnectionContext.parse(validJdbcUrl, properties);
   }
 }
