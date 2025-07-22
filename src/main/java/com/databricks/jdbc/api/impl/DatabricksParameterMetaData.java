@@ -119,7 +119,8 @@ public class DatabricksParameterMetaData implements ParameterMetaData {
   }
 
   /**
-   * Counts the number of parameter markers (?) in the SQL statement.
+   * Counts the number of parameter markers (?) in the SQL statement. This is currently a hacky
+   * implementation that may need improvement for complex SQL.
    *
    * @param sql The SQL statement to analyze
    * @return The number of parameter markers in the SQL statement
