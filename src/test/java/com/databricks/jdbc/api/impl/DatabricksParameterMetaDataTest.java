@@ -217,4 +217,36 @@ public class DatabricksParameterMetaDataTest {
     DatabricksParameterMetaData metadata = new DatabricksParameterMetaData(sql);
     assertEquals(2, metadata.getParameterCount());
   }
+
+  @Test
+  public void testParameterCountExceedsBindingsThrowsException() {
+    String sql = "SELECT * FROM table WHERE id = ? AND name = ?"; // 2 parameters
+    DatabricksParameterMetaData metadata = new DatabricksParameterMetaData(sql);
+
+    // Add 3 parameter bindings (more than the 2 parameters in SQL)
+    metadata.put(
+        1,
+        ImmutableSqlParameter.builder().type(ColumnInfoTypeName.INT).cardinal(1).value(1).build());
+    metadata.put(
+        2,
+        ImmutableSqlParameter.builder()
+            .type(ColumnInfoTypeName.STRING)
+            .cardinal(2)
+            .value("test")
+            .build());
+    metadata.put(
+        3,
+        ImmutableSqlParameter.builder()
+            .type(ColumnInfoTypeName.STRING)
+            .cardinal(3)
+            .value("extra")
+            .build());
+
+    // getParameterCount should throw SQLException due to too many bindings
+    SQLException exception = assertThrows(SQLException.class, metadata::getParameterCount);
+    assertTrue(
+        exception
+            .getMessage()
+            .contains("Number of parameter bindings (3) exceeds parameter count (2)"));
+  }
 }

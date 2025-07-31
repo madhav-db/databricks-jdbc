@@ -43,7 +43,24 @@ public class DatabricksParameterMetaData implements ParameterMetaData {
 
   @Override
   public int getParameterCount() throws SQLException {
+    validateParameterBindings();
     return parameterCount;
+  }
+
+  /**
+   * Validates that parameter bindings do not exceed the parameter count.
+   *
+   * @throws SQLException if there are more parameter bindings than expected parameters
+   */
+  private void validateParameterBindings() throws SQLException {
+    if (parameterBindings.size() > parameterCount) {
+      throw new SQLException(
+          "Number of parameter bindings ("
+              + parameterBindings.size()
+              + ") exceeds parameter count ("
+              + parameterCount
+              + ")");
+    }
   }
 
   @Override
