@@ -275,8 +275,6 @@ public class DatabricksSdkClient implements IDatabricksClient {
       handleFailedExecution(response, statementId, sql);
     }
 
-    // If the operation is already closed, mark the statement as closed to fail-fast on subsequent
-    // operations
     if (responseState == StatementState.CLOSED && parentStatement != null) {
       LOGGER.debug("Statement {} returned CLOSED status, marking statement as closed", statementId);
       ((DatabricksStatement) parentStatement.getStatement()).markAsClosed();
