@@ -816,6 +816,26 @@ public class DatabricksStatement implements IDatabricksStatement, IDatabricksSta
   }
 
   /**
+   * Marks the statement as closed without attempting to close it on the server. This should be used
+   * when the server has already indicated the statement is closed.
+   */
+  public void markAsClosed() {
+    LOGGER.debug("Marking statement {} as closed (server already closed)", statementId);
+    if (resultSet != null) {
+      try {
+        this.resultSet.close();
+      } catch (DatabricksSQLException e) {
+        LOGGER.warn("Error closing result set: {}", e.getMessage());
+      }
+      this.resultSet = null;
+    }
+    this.connection.closeStatement(this);
+    DatabricksThreadContextHolder.clearStatementInfo();
+    shutDownExecutor();
+    this.isClosed = true;
+  }
+
+  /**
    * Shuts down the ExecutorService used for asynchronous execution.
    *
    * <p>Initiates an orderly shutdown of the executor, waiting up to 60 seconds for currently
