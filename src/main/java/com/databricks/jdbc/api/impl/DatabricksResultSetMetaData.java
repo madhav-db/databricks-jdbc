@@ -181,13 +181,21 @@ public class DatabricksResultSetMetaData implements ResultSetMetaData {
           int precision = precisionAndScale[0];
           int scale = precisionAndScale[1];
 
+          // Use arrowMetadata for type text if available, as it contains full type information
+          String columnTypeText =
+              (arrowMetadata != null
+                      && columnIndex < arrowMetadata.size()
+                      && arrowMetadata.get(columnIndex) != null)
+                  ? arrowMetadata.get(columnIndex)
+                  : getTypeTextFromTypeDesc(columnDesc.getTypeDesc());
+
           ImmutableDatabricksColumn.Builder columnBuilder = getColumnBuilder();
           columnBuilder
               .columnName(columnInfo.getName())
               .columnTypeClassName(
                   DatabricksTypeUtil.getColumnTypeClassName(columnInfo.getTypeName()))
               .columnType(DatabricksTypeUtil.getColumnType(columnInfo.getTypeName()))
-              .columnTypeText(getTypeTextFromTypeDesc(columnDesc.getTypeDesc()))
+              .columnTypeText(columnTypeText)
               // columnInfoTypeName does not have BIGINT, SMALLINT. Extracting from thriftType in
               // typeDesc
               .typePrecision(precision)
