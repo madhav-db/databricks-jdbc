@@ -735,6 +735,93 @@ public class DatabricksStatementTest {
   }
 
   @Test
+  public void testMarkAsClosed() throws Exception {
+    IDatabricksConnectionContext connectionContext =
+        DatabricksConnectionContext.parse(JDBC_URL, new Properties());
+    DatabricksConnection connection = new DatabricksConnection(connectionContext, client);
+    DatabricksStatement statement = new DatabricksStatement(connection);
+
+    when(client.executeStatement(
+            eq(STATEMENT),
+            eq(new Warehouse(WAREHOUSE_ID)),
+            eq(new HashMap<>()),
+            eq(StatementType.QUERY),
+            any(IDatabricksSession.class),
+            eq(statement)))
+        .thenReturn(resultSet);
+
+    // Execute a query to set up result set
+    statement.executeQuery(STATEMENT);
+    assertFalse(statement.isClosed());
+
+    // Mark statement as closed without attempting to close on server
+    statement.markAsClosed();
+
+    // Verify statement is closed
+    assertTrue(statement.isClosed());
+
+    // Verify that closeStatement was NOT called on the client (only on connection)
+    verify(client, never()).closeStatement(any(StatementId.class));
+
+    // Verify that the statement cannot be used anymore
+    assertThrows(DatabricksSQLException.class, () -> statement.executeQuery(STATEMENT));
+  }
+
+  @Test
+  public void testMarkAsClosedWithResultSetCloseError() throws Exception {
+    IDatabricksConnectionContext connectionContext =
+        DatabricksConnectionContext.parse(JDBC_URL, new Properties());
+    DatabricksConnection connection = new DatabricksConnection(connectionContext, client);
+    DatabricksStatement statement = new DatabricksStatement(connection);
+
+    // Create a mock result set that throws an exception on close
+    DatabricksResultSet mockResultSet = mock(DatabricksResultSet.class);
+    doThrow(new DatabricksSQLException("Error closing result set", "HY000"))
+        .when(mockResultSet)
+        .close();
+
+    when(client.executeStatement(
+            eq(STATEMENT),
+            eq(new Warehouse(WAREHOUSE_ID)),
+            eq(new HashMap<>()),
+            eq(StatementType.QUERY),
+            any(IDatabricksSession.class),
+            eq(statement)))
+        .thenReturn(mockResultSet);
+
+    // Execute a query to set up result set
+    statement.executeQuery(STATEMENT);
+    assertFalse(statement.isClosed());
+
+    // Mark statement as closed - should not throw even if result set close fails
+    assertDoesNotThrow(() -> statement.markAsClosed());
+
+    // Verify statement is still closed despite result set close error
+    assertTrue(statement.isClosed());
+
+    // Verify that closeStatement was NOT called on the client
+    verify(client, never()).closeStatement(any(StatementId.class));
+  }
+
+  @Test
+  public void testMarkAsClosedWithoutResultSet() throws Exception {
+    IDatabricksConnectionContext connectionContext =
+        DatabricksConnectionContext.parse(JDBC_URL, new Properties());
+    DatabricksConnection connection = new DatabricksConnection(connectionContext, client);
+    DatabricksStatement statement = new DatabricksStatement(connection);
+
+    // Mark statement as closed without executing any query (no result set)
+    assertFalse(statement.isClosed());
+    statement.markAsClosed();
+
+    // Verify statement is closed
+    assertTrue(statement.isClosed());
+
+    // Verify that closeStatement was NOT called on the client
+    verify(client, never()).closeStatement(any(StatementId.class));
+  }
+
+  @Test
   public void testRemoveEmptyEscapeClauseFromQuery() throws Exception {
     IDatabricksConnectionContext connectionContext =
         DatabricksConnectionContext.parse(JDBC_URL, new Properties());
