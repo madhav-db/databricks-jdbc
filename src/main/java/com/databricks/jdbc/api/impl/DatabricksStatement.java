@@ -106,8 +106,12 @@ public class DatabricksStatement implements IDatabricksStatement, IDatabricksSta
   @Override
   public void close(boolean removeFromSession) throws DatabricksSQLException {
     LOGGER.debug("public void close(boolean removeFromSession)");
-
-    if (statementId == null) {
+    if (isClosed) {
+      if (resultSet != null) {
+        this.resultSet.close();
+        this.resultSet = null;
+      }
+    } else if (statementId == null) {
       String warningMsg = "The statement you are trying to close does not have an ID yet.";
       LOGGER.warn(warningMsg);
       warnings = WarningUtil.addWarning(warnings, warningMsg);
@@ -817,22 +821,20 @@ public class DatabricksStatement implements IDatabricksStatement, IDatabricksSta
   }
 
   /**
-   * Marks the statement as closed without attempting to close it on the server. This should be used
-   * when the server has already indicated the statement is closed.
+   * Marks the statement as closed without attempting to close it on the server or clean up local
+   * resources. This should be used when the server has already indicated the statement is closed.
+   *
+   * <p>This method sets the closed flag to prevent further operations, but defers resource cleanup
+   * (result set, executor) to the {@link #close(boolean)} method. When {@code close()} is
+   * subsequently called, it will detect the statement is already closed and skip the server-side
+   * close operation while still cleaning up local resources.
+   *
+   * @see #close(boolean)
    */
   public void markAsClosed() {
     LOGGER.debug("Marking statement {} as closed (server already closed)", statementId);
-    if (resultSet != null) {
-      try {
-        this.resultSet.close();
-      } catch (DatabricksSQLException e) {
-        LOGGER.warn("Error closing result set: {}", e.getMessage());
-      }
-      this.resultSet = null;
-    }
     this.connection.closeStatement(this);
     DatabricksThreadContextHolder.clearStatementInfo();
-    shutDownExecutor();
     this.isClosed = true;
   }
 
