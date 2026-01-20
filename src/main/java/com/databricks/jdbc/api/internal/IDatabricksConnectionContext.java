@@ -447,4 +447,24 @@ public interface IDatabricksConnectionContext {
    * @return the link prefetch window size (default: 128)
    */
   int getLinkPrefetchWindow();
+
+  /**
+   * Returns the network timeout in milliseconds.
+   *
+   * <p>The network timeout is the maximum time to wait for network I/O operations to complete. A
+   * value of 0 indicates no timeout.
+   *
+   * @return the network timeout in milliseconds, or 0 if no timeout is set
+   */
+  int getNetworkTimeout();
+
+  /**
+   * Sets the network timeout in milliseconds.
+   *
+   * <p>The network timeout is the maximum time to wait for network I/O operations to complete. A
+   * value of 0 indicates no timeout.
+   *
+   * @param milliseconds the network timeout in milliseconds, or 0 for no timeout
+   */
+  void setNetworkTimeout(int milliseconds);
 }

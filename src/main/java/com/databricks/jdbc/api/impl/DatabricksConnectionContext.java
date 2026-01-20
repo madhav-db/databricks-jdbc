@@ -53,6 +53,9 @@ public class DatabricksConnectionContext implements IDatabricksConnectionContext
   @VisibleForTesting final ImmutableMap<String, String> parameters;
   @VisibleForTesting final String connectionUuid;
 
+  /** Network timeout in milliseconds (0 = no timeout) */
+  private volatile int networkTimeout = 0;
+
   private DatabricksConnectionContext(
       String connectionURL,
       String host,
@@ -1206,5 +1209,15 @@ public class DatabricksConnectionContext implements IDatabricksConnectionContext
   @Override
   public int getLinkPrefetchWindow() {
     return Integer.parseInt(getParameter(DatabricksJdbcUrlParams.LINK_PREFETCH_WINDOW));
+  }
+
+  @Override
+  public int getNetworkTimeout() {
+    return networkTimeout;
+  }
+
+  @Override
+  public void setNetworkTimeout(int milliseconds) {
+    this.networkTimeout = milliseconds;
   }
 }

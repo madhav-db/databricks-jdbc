@@ -847,16 +847,25 @@ public class DatabricksConnection implements IDatabricksConnection, IDatabricksC
 
   @Override
   public void setNetworkTimeout(Executor executor, int milliseconds) throws SQLException {
-    LOGGER.debug("public void setNetworkTimeout(Executor executor, int milliseconds)");
-    throw new DatabricksSQLFeatureNotSupportedException(
-        "Not supported in DatabricksConnection - setNetworkTimeout(Executor executor, int milliseconds)");
+    LOGGER.debug(
+        "public void setNetworkTimeout(Executor executor, int milliseconds = {})", milliseconds);
+    throwExceptionIfConnectionIsClosed();
+
+    if (milliseconds < 0) {
+      throw new DatabricksSQLException(
+          "Network timeout cannot be negative: " + milliseconds,
+          DatabricksDriverErrorCode.INPUT_VALIDATION_ERROR);
+    }
+
+    connectionContext.setNetworkTimeout(milliseconds);
+    LOGGER.debug("Network timeout set to {} milliseconds", milliseconds);
   }
 
   @Override
   public int getNetworkTimeout() throws SQLException {
     LOGGER.debug("public int getNetworkTimeout()");
-    throw new DatabricksSQLFeatureNotSupportedException(
-        "Not supported in DatabricksConnection - getNetworkTimeout()");
+    throwExceptionIfConnectionIsClosed();
+    return connectionContext.getNetworkTimeout();
   }
 
   @Override

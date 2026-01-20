@@ -464,11 +464,14 @@ public class DatabricksConnectionTest {
     // With default IgnoreTransactions=1, these are no-ops
     assertDoesNotThrow(() -> connection.rollback(null));
     assertDoesNotThrow(() -> connection.releaseSavepoint(null));
-    assertThrows(
-        DatabricksSQLFeatureNotSupportedException.class,
-        () -> connection.setNetworkTimeout(null, 1));
-    assertThrows(
-        DatabricksSQLFeatureNotSupportedException.class, () -> connection.getNetworkTimeout());
+    // Test network timeout functionality
+    assertEquals(0, connection.getNetworkTimeout()); // Default is 0 (no timeout)
+    assertDoesNotThrow(() -> connection.setNetworkTimeout(null, 5000));
+    assertEquals(5000, connection.getNetworkTimeout());
+    assertDoesNotThrow(() -> connection.setNetworkTimeout(null, 0)); // Reset to no timeout
+    assertEquals(0, connection.getNetworkTimeout());
+    // Negative timeout should throw exception
+    assertThrows(DatabricksSQLException.class, () -> connection.setNetworkTimeout(null, -1));
     assertInstanceOf(
         IDatabricksConnectionInternal.class,
         connection.unwrap(IDatabricksConnectionInternal.class));

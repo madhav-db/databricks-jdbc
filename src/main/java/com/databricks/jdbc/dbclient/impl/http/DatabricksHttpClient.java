@@ -145,7 +145,10 @@ public class DatabricksHttpClient implements IDatabricksHttpClient, Closeable {
   }
 
   private RequestConfig makeRequestConfig(IDatabricksConnectionContext connectionContext) {
-    int timeoutMillis = connectionContext.getSocketTimeout() * 1000;
+    // Use network timeout if set, otherwise fall back to socket timeout
+    int networkTimeout = connectionContext.getNetworkTimeout();
+    int timeoutMillis =
+        networkTimeout > 0 ? networkTimeout : connectionContext.getSocketTimeout() * 1000;
     int requestTimeout =
         connectionContext.getHttpConnectionRequestTimeout() != null
             ? connectionContext.getHttpConnectionRequestTimeout() * 1000
