@@ -51,8 +51,10 @@ public class DatabricksHttpClient implements IDatabricksHttpClient, Closeable {
   private final CloseableHttpClient httpClient;
   private IdleConnectionEvictor idleConnectionEvictor;
   private CloseableHttpAsyncClient asyncClient;
+  private final IDatabricksConnectionContext connectionContext;
 
   DatabricksHttpClient(IDatabricksConnectionContext connectionContext, HttpClientType type) {
+    this.connectionContext = connectionContext;
     connectionManager = initializeConnectionManager(connectionContext);
     httpClient = makeClosableHttpClient(connectionContext, type);
     idleConnectionEvictor =
@@ -68,6 +70,7 @@ public class DatabricksHttpClient implements IDatabricksHttpClient, Closeable {
       PoolingHttpClientConnectionManager testConnectionManager) {
     httpClient = testCloseableHttpClient;
     connectionManager = testConnectionManager;
+    this.connectionContext = null;
   }
 
   @Override
@@ -91,10 +94,12 @@ public class DatabricksHttpClient implements IDatabricksHttpClient, Closeable {
 
       // Apply current network timeout dynamically per request
       // This allows setNetworkTimeout to take effect without recreating the HTTP client
-      int networkTimeout = connectionContext.getNetworkTimeout();
-      if (networkTimeout > 0 && request instanceof HttpRequestBase) {
-        RequestConfig requestConfig = makeRequestConfig(connectionContext);
-        ((HttpRequestBase) request).setConfig(requestConfig);
+      if (connectionContext != null) {
+        int networkTimeout = connectionContext.getNetworkTimeout();
+        if (networkTimeout > 0 && request instanceof HttpRequestBase) {
+          RequestConfig requestConfig = makeRequestConfig(connectionContext);
+          ((HttpRequestBase) request).setConfig(requestConfig);
+        }
       }
 
       return httpClient.execute(request);
