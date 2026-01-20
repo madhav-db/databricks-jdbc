@@ -32,6 +32,7 @@ import org.apache.hc.core5.http.nio.AsyncResponseConsumer;
 import org.apache.http.HttpHost;
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.client.methods.HttpRequestBase;
 import org.apache.http.client.methods.HttpUriRequest;
 import org.apache.http.conn.UnsupportedSchemeException;
 import org.apache.http.conn.routing.HttpRoute;
@@ -87,6 +88,15 @@ public class DatabricksHttpClient implements IDatabricksHttpClient, Closeable {
       if (!isNullOrEmpty(userAgentString) && !request.containsHeader("User-Agent")) {
         request.setHeader("User-Agent", userAgentString);
       }
+
+      // Apply current network timeout dynamically per request
+      // This allows setNetworkTimeout to take effect without recreating the HTTP client
+      int networkTimeout = connectionContext.getNetworkTimeout();
+      if (networkTimeout > 0 && request instanceof HttpRequestBase) {
+        RequestConfig requestConfig = makeRequestConfig(connectionContext);
+        ((HttpRequestBase) request).setConfig(requestConfig);
+      }
+
       return httpClient.execute(request);
     } catch (IOException e) {
       throwHttpException(e, request);
@@ -145,8 +155,10 @@ public class DatabricksHttpClient implements IDatabricksHttpClient, Closeable {
   }
 
   private RequestConfig makeRequestConfig(IDatabricksConnectionContext connectionContext) {
-    // Use network timeout if set, otherwise fall back to socket timeout
+    // Check if network timeout is explicitly set (non-zero)
     int networkTimeout = connectionContext.getNetworkTimeout();
+
+    // If network timeout is set, use it; otherwise use socket timeout configuration
     int timeoutMillis =
         networkTimeout > 0 ? networkTimeout : connectionContext.getSocketTimeout() * 1000;
     int requestTimeout =
