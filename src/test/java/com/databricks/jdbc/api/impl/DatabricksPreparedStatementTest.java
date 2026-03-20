@@ -48,6 +48,7 @@ public class DatabricksPreparedStatementTest {
   private static final String WAREHOUSE_ID = "99999999";
   private static final String STATEMENT =
       "SELECT * FROM orders WHERE user_id = ? AND shard = ? AND region_code = ? AND namespace = ?";
+  private static final String UPDATE_STATEMENT = "UPDATE orders SET status = ? WHERE user_id = ?";
   private static final String BATCH_STATEMENT =
       "INSERT INTO orders (user_id, shard, region_code, namespace) VALUES (?, ?, ?, ?)";
   private static final String JDBC_URL =
@@ -92,7 +93,8 @@ public class DatabricksPreparedStatementTest {
             any(HashMap.class),
             eq(StatementType.QUERY),
             any(IDatabricksSession.class),
-            eq(statement)))
+            eq(statement),
+            any()))
         .thenReturn(resultSet);
 
     DatabricksResultSet newResultSet = (DatabricksResultSet) statement.executeQuery();
@@ -117,7 +119,8 @@ public class DatabricksPreparedStatementTest {
             any(HashMap.class),
             eq(StatementType.QUERY),
             any(IDatabricksSession.class),
-            eq(statement)))
+            eq(statement),
+            any()))
         .thenReturn(resultSet);
 
     DatabricksResultSet newResultSet = (DatabricksResultSet) statement.executeQuery();
@@ -142,7 +145,8 @@ public class DatabricksPreparedStatementTest {
             any(HashMap.class),
             eq(StatementType.QUERY),
             any(IDatabricksSession.class),
-            eq(statement)))
+            eq(statement),
+            any()))
         .thenReturn(resultSet);
 
     DatabricksResultSet newResultSet = (DatabricksResultSet) statement.executeQuery();
@@ -167,7 +171,8 @@ public class DatabricksPreparedStatementTest {
             any(HashMap.class),
             eq(StatementType.QUERY),
             any(IDatabricksSession.class),
-            eq(statement)))
+            eq(statement),
+            any()))
         .thenReturn(resultSet);
 
     DatabricksResultSet newResultSet = (DatabricksResultSet) statement.executeQuery();
@@ -182,15 +187,17 @@ public class DatabricksPreparedStatementTest {
     IDatabricksConnectionContext connectionContext =
         DatabricksConnectionContext.parse(JDBC_URL, new Properties());
     DatabricksConnection connection = new DatabricksConnection(connectionContext, client);
-    DatabricksPreparedStatement statement = new DatabricksPreparedStatement(connection, STATEMENT);
+    DatabricksPreparedStatement statement =
+        new DatabricksPreparedStatement(connection, UPDATE_STATEMENT);
     when(resultSet.getUpdateCount()).thenReturn(2L);
     when(client.executeStatement(
-            eq(STATEMENT),
+            eq(UPDATE_STATEMENT),
             eq(new Warehouse(WAREHOUSE_ID)),
             eq(new HashMap<Integer, ImmutableSqlParameter>()),
             eq(StatementType.UPDATE),
             any(IDatabricksSession.class),
-            eq(statement)))
+            eq(statement),
+            any()))
         .thenReturn(resultSet);
 
     int updateCount = statement.executeUpdate();
@@ -205,15 +212,17 @@ public class DatabricksPreparedStatementTest {
     IDatabricksConnectionContext connectionContext =
         DatabricksConnectionContext.parse(JDBC_URL, new Properties());
     DatabricksConnection connection = new DatabricksConnection(connectionContext, client);
-    DatabricksPreparedStatement statement = new DatabricksPreparedStatement(connection, STATEMENT);
+    DatabricksPreparedStatement statement =
+        new DatabricksPreparedStatement(connection, UPDATE_STATEMENT);
     when(resultSet.getUpdateCount()).thenReturn(2L);
     when(client.executeStatement(
-            eq(STATEMENT),
+            eq(UPDATE_STATEMENT),
             eq(new Warehouse(WAREHOUSE_ID)),
             eq(new HashMap<Integer, ImmutableSqlParameter>()),
             eq(StatementType.UPDATE),
             any(IDatabricksSession.class),
-            eq(statement)))
+            eq(statement),
+            any()))
         .thenReturn(resultSet);
 
     long updateCount = statement.executeLargeUpdate();
@@ -240,14 +249,15 @@ public class DatabricksPreparedStatementTest {
     }
     // Our implementation converts single INSERT to multi-row INSERT for batching
     String expectedMultiRowSQL =
-        "INSERT INTO orders (user_id, shard, region_code, namespace) VALUES (?, ?, ?, ?), (?, ?, ?, ?), (?, ?, ?, ?), (?, ?, ?, ?)";
+        "INSERT INTO orders (`user_id`, `shard`, `region_code`, `namespace`) VALUES (?, ?, ?, ?), (?, ?, ?, ?), (?, ?, ?, ?), (?, ?, ?, ?)";
     when(client.executeStatement(
             eq(expectedMultiRowSQL),
             eq(new Warehouse(WAREHOUSE_ID)),
             any(HashMap.class),
             eq(StatementType.UPDATE),
             any(IDatabricksSession.class),
-            eq(statement)))
+            eq(statement),
+            any()))
         .thenReturn(resultSet);
     lenient()
         .when(resultSet.getUpdateCount())
@@ -298,14 +308,15 @@ public class DatabricksPreparedStatementTest {
 
     // Our implementation batches all into one multi-row INSERT, so if it fails, all fail
     String expectedMultiRowSQL =
-        "INSERT INTO orders (user_id, shard, region_code, namespace) VALUES (?, ?, ?, ?), (?, ?, ?, ?), (?, ?, ?, ?), (?, ?, ?, ?)";
+        "INSERT INTO orders (`user_id`, `shard`, `region_code`, `namespace`) VALUES (?, ?, ?, ?), (?, ?, ?, ?), (?, ?, ?, ?), (?, ?, ?, ?)";
     when(client.executeStatement(
             eq(expectedMultiRowSQL),
             eq(new Warehouse(WAREHOUSE_ID)),
             any(HashMap.class),
             eq(StatementType.UPDATE),
             any(IDatabricksSession.class),
-            eq(statement)))
+            eq(statement),
+            any()))
         .thenThrow(new SQLException());
 
     DatabricksBatchUpdateException exception =
@@ -335,14 +346,15 @@ public class DatabricksPreparedStatementTest {
     }
     // Our implementation converts single INSERT to multi-row INSERT for batching
     String expectedMultiRowSQL =
-        "INSERT INTO orders (user_id, shard, region_code, namespace) VALUES (?, ?, ?, ?), (?, ?, ?, ?), (?, ?, ?, ?), (?, ?, ?, ?)";
+        "INSERT INTO orders (`user_id`, `shard`, `region_code`, `namespace`) VALUES (?, ?, ?, ?), (?, ?, ?, ?), (?, ?, ?, ?), (?, ?, ?, ?)";
     when(client.executeStatement(
             eq(expectedMultiRowSQL),
             eq(new Warehouse(WAREHOUSE_ID)),
             any(HashMap.class),
             eq(StatementType.UPDATE),
             any(IDatabricksSession.class),
-            eq(statement)))
+            eq(statement),
+            any()))
         .thenReturn(resultSet);
     lenient()
         .when(resultSet.getUpdateCount())
@@ -374,14 +386,15 @@ public class DatabricksPreparedStatementTest {
 
     // Our implementation batches all into one multi-row INSERT, so if it fails, all fail
     String expectedMultiRowSQL =
-        "INSERT INTO orders (user_id, shard, region_code, namespace) VALUES (?, ?, ?, ?), (?, ?, ?, ?), (?, ?, ?, ?), (?, ?, ?, ?)";
+        "INSERT INTO orders (`user_id`, `shard`, `region_code`, `namespace`) VALUES (?, ?, ?, ?), (?, ?, ?, ?), (?, ?, ?, ?), (?, ?, ?, ?)";
     when(client.executeStatement(
             eq(expectedMultiRowSQL),
             eq(new Warehouse(WAREHOUSE_ID)),
             any(HashMap.class),
             eq(StatementType.UPDATE),
             any(IDatabricksSession.class),
-            eq(statement)))
+            eq(statement),
+            any()))
         .thenThrow(new SQLException());
 
     DatabricksBatchUpdateException exception =
@@ -687,7 +700,8 @@ public class DatabricksPreparedStatementTest {
             any(HashMap.class),
             eq(StatementType.UPDATE),
             any(IDatabricksSession.class),
-            eq(statement)))
+            eq(statement),
+            any()))
         .thenReturn(resultSet);
     lenient()
         .when(resultSet.getUpdateCount())
@@ -753,7 +767,8 @@ public class DatabricksPreparedStatementTest {
             any(HashMap.class),
             eq(StatementType.UPDATE),
             any(IDatabricksSession.class),
-            eq(statement)))
+            eq(statement),
+            any()))
         .thenReturn(resultSet);
     lenient().when(resultSet.getUpdateCount()).thenReturn(1L); // Each execution affects 1 row
 
@@ -798,7 +813,8 @@ public class DatabricksPreparedStatementTest {
             any(HashMap.class),
             eq(StatementType.UPDATE),
             any(IDatabricksSession.class),
-            eq(statement)))
+            eq(statement),
+            any()))
         .thenReturn(resultSet);
     lenient()
         .when(resultSet.getUpdateCount())
@@ -946,14 +962,16 @@ public class DatabricksPreparedStatementTest {
 
     // With supportManyParameters=1, all 200 rows should be batched in a single INSERT
     // with interpolated values (not parameterized)
-    String expectedSqlPrefix = "INSERT INTO orders (user_id, shard, region_code, namespace) VALUES";
+    String expectedSqlPrefix =
+        "INSERT INTO orders (`user_id`, `shard`, `region_code`, `namespace`) VALUES";
     when(client.executeStatement(
             org.mockito.ArgumentMatchers.startsWith(expectedSqlPrefix),
             eq(new Warehouse(WAREHOUSE_ID)),
             any(HashMap.class),
             eq(StatementType.UPDATE),
             any(IDatabricksSession.class),
-            eq(statement)))
+            eq(statement),
+            any()))
         .thenReturn(resultSet);
     lenient().when(resultSet.getUpdateCount()).thenReturn(200L);
 
@@ -987,14 +1005,16 @@ public class DatabricksPreparedStatementTest {
     }
 
     // With supportManyParameters=1, all 10,000 rows execute in a single INSERT
-    String expectedSqlPrefix = "INSERT INTO orders (user_id, shard, region_code, namespace) VALUES";
+    String expectedSqlPrefix =
+        "INSERT INTO orders (`user_id`, `shard`, `region_code`, `namespace`) VALUES";
     when(client.executeStatement(
             org.mockito.ArgumentMatchers.startsWith(expectedSqlPrefix),
             eq(new Warehouse(WAREHOUSE_ID)),
             any(HashMap.class),
             eq(StatementType.UPDATE),
             any(IDatabricksSession.class),
-            eq(statement)))
+            eq(statement),
+            any()))
         .thenReturn(resultSet);
     lenient().when(resultSet.getUpdateCount()).thenReturn((long) rowCount);
 
@@ -1030,14 +1050,16 @@ public class DatabricksPreparedStatementTest {
     assertEquals(50, connectionContext.getBatchInsertSize());
 
     // Mock will be called 4 times (200 rows / 50 batch size = 4 chunks)
-    String expectedSqlPrefix = "INSERT INTO orders (user_id, shard, region_code, namespace) VALUES";
+    String expectedSqlPrefix =
+        "INSERT INTO orders (`user_id`, `shard`, `region_code`, `namespace`) VALUES";
     when(client.executeStatement(
             org.mockito.ArgumentMatchers.startsWith(expectedSqlPrefix),
             eq(new Warehouse(WAREHOUSE_ID)),
             any(HashMap.class),
             eq(StatementType.UPDATE),
             any(IDatabricksSession.class),
-            eq(statement)))
+            eq(statement),
+            any()))
         .thenReturn(resultSet);
     lenient().when(resultSet.getUpdateCount()).thenReturn(50L);
 
@@ -1055,7 +1077,8 @@ public class DatabricksPreparedStatementTest {
             any(HashMap.class),
             eq(StatementType.UPDATE),
             any(IDatabricksSession.class),
-            eq(statement));
+            eq(statement),
+            any());
   }
 
   @Test
@@ -1088,14 +1111,16 @@ public class DatabricksPreparedStatementTest {
 
     // Without supportManyParameters, should chunk at 256/4 = 64 rows
     // even though BatchInsertSize=5000
-    String expectedSqlPrefix = "INSERT INTO orders (user_id, shard, region_code, namespace) VALUES";
+    String expectedSqlPrefix =
+        "INSERT INTO orders (`user_id`, `shard`, `region_code`, `namespace`) VALUES";
     when(client.executeStatement(
             org.mockito.ArgumentMatchers.startsWith(expectedSqlPrefix),
             eq(new Warehouse(WAREHOUSE_ID)),
             any(HashMap.class),
             eq(StatementType.UPDATE),
             any(IDatabricksSession.class),
-            eq(statement)))
+            eq(statement),
+            any()))
         .thenReturn(resultSet);
     lenient().when(resultSet.getUpdateCount()).thenReturn(64L);
 
@@ -1136,7 +1161,8 @@ public class DatabricksPreparedStatementTest {
             any(HashMap.class),
             eq(StatementType.UPDATE),
             any(IDatabricksSession.class),
-            eq(statement)))
+            eq(statement),
+            any()))
         .thenReturn(resultSet);
     lenient().when(resultSet.getUpdateCount()).thenReturn(2L);
 
@@ -1147,7 +1173,7 @@ public class DatabricksPreparedStatementTest {
     String executedSql = sqlCaptor.getValue();
 
     String expectedSql =
-        "INSERT INTO events (id, name, created_at) VALUES "
+        "INSERT INTO events (`id`, `name`, `created_at`) VALUES "
             + "(1, 'Event One', '2024-01-01 12:30:45.123'), "
             + "(2, 'Event Two', '2024-02-15 08:15:30.456')";
 
@@ -1243,7 +1269,8 @@ public class DatabricksPreparedStatementTest {
             any(HashMap.class),
             eq(StatementType.UPDATE),
             any(IDatabricksSession.class),
-            eq(statement)))
+            eq(statement),
+            any()))
         .thenReturn(resultSet);
 
     statement.executeUpdate();
@@ -1343,7 +1370,8 @@ public class DatabricksPreparedStatementTest {
             any(HashMap.class),
             eq(StatementType.UPDATE),
             any(IDatabricksSession.class),
-            eq(statement)))
+            eq(statement),
+            any()))
         .thenReturn(resultSet);
 
     statement.executeUpdate();
