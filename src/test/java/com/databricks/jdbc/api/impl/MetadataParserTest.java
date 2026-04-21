@@ -389,6 +389,40 @@ public class MetadataParserTest {
         "Parsed struct metadata with mixed complex types and DECIMAL fields should handle all combinations correctly.");
   }
 
+  /**
+   * Regression test for ES-1526082: the server can return a bare type name (e.g. "ARRAY") instead
+   * of the parameterized form ("ARRAY<STRING>") when both the arrow schema and the embedded arrow
+   * metadata are absent. The parser must not throw — it should return an empty string to signal
+   * "unknown element type" so the caller can fall back to dynamic JSON inference.
+   */
+  @Test
+  @DisplayName("parseArrayMetadata with bare ARRAY returns empty string")
+  public void testParseArrayMetadata_BareArray() {
+    assertEquals("", MetadataParser.parseArrayMetadata("ARRAY"));
+    assertEquals("", MetadataParser.parseArrayMetadata(""));
+    assertEquals("", MetadataParser.parseArrayMetadata(null));
+  }
+
+  /** Regression test for ES-1526082: bare "MAP" must return a splittable "keyType, valueType". */
+  @Test
+  @DisplayName("parseMapMetadata with bare MAP returns empty key/value placeholder")
+  public void testParseMapMetadata_BareMap() {
+    String result = MetadataParser.parseMapMetadata("MAP");
+    String[] kv = result.split(",", 2);
+    assertEquals(2, kv.length, "Result must split into two parts for keyType/valueType.");
+    assertEquals("", kv[0].trim());
+    assertEquals("", kv[1].trim());
+  }
+
+  /** Regression test for ES-1526082: bare "STRUCT" must return an empty field-type map. */
+  @Test
+  @DisplayName("parseStructMetadata with bare STRUCT returns empty map")
+  public void testParseStructMetadata_BareStruct() {
+    assertTrue(MetadataParser.parseStructMetadata("STRUCT").isEmpty());
+    assertTrue(MetadataParser.parseStructMetadata("").isEmpty());
+    assertTrue(MetadataParser.parseStructMetadata(null).isEmpty());
+  }
+
   /** Test parsing of STRUCT with other parenthesized types to ensure fix applies broadly. */
   @Test
   @DisplayName("parseStructMetadata with various parenthesized types")

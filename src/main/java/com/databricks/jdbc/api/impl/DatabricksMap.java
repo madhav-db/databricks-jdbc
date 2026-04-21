@@ -45,9 +45,13 @@ public class DatabricksMap<K, V> implements Map<K, V> {
       String valueType = mapMetadata[1].trim();
       LOGGER.debug("Parsed metadata - Key Type: {}, Value Type: {}", keyType, valueType);
 
+      boolean bareKey = keyType.isEmpty();
+      boolean bareValue = valueType.isEmpty();
       for (Map.Entry<K, V> entry : originalMap.entrySet()) {
-        K key = convertSimpleValue(entry.getKey(), keyType);
-        V value = convertValue(entry.getValue(), valueType);
+        // When the server omitted parameterized key/value types (bare "MAP"), preserve the
+        // already-typed value produced by dynamic JSON inference upstream.
+        K key = bareKey ? entry.getKey() : convertSimpleValue(entry.getKey(), keyType);
+        V value = bareValue ? entry.getValue() : convertValue(entry.getValue(), valueType);
         convertedMap.put(key, value);
         LOGGER.trace("Converted entry - Key: {}, Converted Value: {}", key, value);
       }

@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import com.databricks.jdbc.exception.DatabricksParsingException;
 import java.sql.Date;
+import java.sql.SQLException;
 import java.sql.Time;
 import java.sql.Timestamp;
 import org.junit.jupiter.api.BeforeEach;
@@ -368,6 +369,110 @@ public class ComplexDataTypeParserTest {
     } catch (Exception e) {
       fail("Should not throw: " + e.getMessage());
     }
+  }
+
+  /**
+   * Regression for ES-1526082: when the server returns a bare type name such as "ARRAY" without
+   * the element-type parameter, the driver used to crash with StringIndexOutOfBoundsException
+   * while trying to parse "ARRAY<...>". It must now fall back to dynamic JSON inference and
+   * return the expected values without throwing.
+   */
+  @Test
+  void testParseJsonStringToDbArray_bareArrayMetadataStrings() throws DatabricksParsingException {
+    String json = "[\"alpha\",\"beta\",\"gamma\"]";
+
+    DatabricksArray dbArray = parser.parseJsonStringToDbArray(json, "ARRAY");
+    assertNotNull(dbArray);
+
+    try {
+      Object[] elements = (Object[]) dbArray.getArray();
+      assertEquals(3, elements.length);
+      assertEquals("alpha", elements[0]);
+      assertEquals("beta", elements[1]);
+      assertEquals("gamma", elements[2]);
+    } catch (Exception e) {
+      fail("Should not throw on bare ARRAY: " + e.getMessage());
+    }
+  }
+
+  @Test
+  void testParseJsonStringToDbArray_bareArrayMetadataNumbers() throws DatabricksParsingException {
+    String json = "[1,2,3]";
+
+    DatabricksArray dbArray = parser.parseJsonStringToDbArray(json, "ARRAY");
+    assertNotNull(dbArray);
+
+    Object[] elements = (Object[]) dbArray.getArray();
+    assertEquals(3, elements.length);
+    // Dynamic inference preserves numeric types rather than stringifying.
+    assertInstanceOf(Number.class, elements[0]);
+    assertEquals(1, ((Number) elements[0]).intValue());
+    assertEquals(2, ((Number) elements[1]).intValue());
+    assertEquals(3, ((Number) elements[2]).intValue());
+  }
+
+  @Test
+  void testParseJsonStringToDbArray_bareArrayMetadataNested()
+      throws DatabricksParsingException, SQLException {
+    // Nested arrays must recurse through dynamic inference.
+    String json = "[[1,2],[3,4]]";
+
+    DatabricksArray dbArray = parser.parseJsonStringToDbArray(json, "ARRAY");
+    assertNotNull(dbArray);
+
+    Object[] elements = (Object[]) dbArray.getArray();
+    assertEquals(2, elements.length);
+    assertInstanceOf(DatabricksArray.class, elements[0]);
+    Object[] inner = (Object[]) ((DatabricksArray) elements[0]).getArray();
+    assertEquals(2, inner.length);
+    assertEquals(1, ((Number) inner[0]).intValue());
+    assertEquals(2, ((Number) inner[1]).intValue());
+  }
+
+  @Test
+  void testParseJsonStringToDbStruct_bareStructMetadata() throws DatabricksParsingException {
+    // Bare STRUCT metadata: the parser should infer field names from the JSON body.
+    String json = "{\"a\":1,\"b\":\"two\",\"c\":true}";
+
+    DatabricksStruct dbStruct = parser.parseJsonStringToDbStruct(json, "STRUCT");
+    assertNotNull(dbStruct);
+
+    try {
+      Object[] attrs = dbStruct.getAttributes();
+      assertEquals(3, attrs.length);
+      assertEquals(1, ((Number) attrs[0]).intValue());
+      assertEquals("two", attrs[1]);
+      assertEquals(Boolean.TRUE, attrs[2]);
+    } catch (Exception e) {
+      fail("Should not throw on bare STRUCT: " + e.getMessage());
+    }
+  }
+
+  @Test
+  void testParseJsonStringToDbMap_bareMapMetadata() throws DatabricksParsingException {
+    String json = "{\"k1\":100,\"k2\":200}";
+
+    DatabricksMap<String, Object> dbMap = parser.parseJsonStringToDbMap(json, "MAP");
+    assertNotNull(dbMap);
+    assertEquals(2, dbMap.size());
+    // Values retain their native JSON-inferred numeric type rather than being stringified.
+    assertEquals(100, ((Number) dbMap.get("k1")).intValue());
+    assertEquals(200, ((Number) dbMap.get("k2")).intValue());
+  }
+
+  /**
+   * Regression: formatMapString is used on the complex-types-disabled path. For bare "MAP"
+   * metadata it used to return the raw JSON (because parseMapMetadata threw and was swallowed by
+   * the outer catch). After relaxing parseMapMetadata, we must keep the STRING/STRING quoting
+   * default so string keys still get quoted correctly.
+   */
+  @Test
+  void testFormatMapString_bareMapMetadataKeepsStringQuoting() {
+    String jsonString = "[{\"key\":\"a\",\"value\":\"b\"},{\"key\":\"c\",\"value\":\"d\"}]";
+    String expected = "{\"a\":\"b\",\"c\":\"d\"}";
+
+    String result = parser.formatMapString(jsonString, "MAP");
+    assertEquals(expected, result);
   }
 
   @Test

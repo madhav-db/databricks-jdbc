@@ -32,11 +32,17 @@ public class DatabricksStruct implements Struct {
     // Parse the metadata into a map: fieldName -> fieldType
     Map<String, String> typeMap = MetadataParser.parseStructMetadata(metadata);
 
-    // Capture field names (in the same order they appear in typeMap).
-    this.fieldNames = new ArrayList<>(typeMap.keySet());
-
-    // Convert attributes to the appropriate array of Objects.
-    this.attributes = convertAttributes(attributes, typeMap);
+    // When the server omitted parameterized field info (bare "STRUCT"), fall back to the
+    // field names and already-typed values from the supplied attributes map.
+    if (typeMap.isEmpty()) {
+      this.fieldNames = new ArrayList<>(attributes.keySet());
+      this.attributes = attributes.values().toArray();
+    } else {
+      // Capture field names (in the same order they appear in typeMap).
+      this.fieldNames = new ArrayList<>(typeMap.keySet());
+      // Convert attributes to the appropriate array of Objects.
+      this.attributes = convertAttributes(attributes, typeMap);
+    }
 
     // Store the entire type definition for getSQLTypeName().
     this.typeName = metadata;

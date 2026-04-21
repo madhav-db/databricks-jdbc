@@ -49,6 +49,12 @@ public class DatabricksArray implements Array {
     for (int i = 0; i < elements.size(); i++) {
       Object element = elements.get(i);
       try {
+        // When element type is unknown (e.g. server returned bare "ARRAY" without parameters),
+        // preserve the values as-is — they were already typed by dynamic JSON inference upstream.
+        if (elementType == null || elementType.isEmpty()) {
+          convertedElements[i] = element;
+          continue;
+        }
         if (elementType.startsWith(DatabricksTypeUtil.STRUCT)) {
           if (element instanceof Map) {
             convertedElements[i] = new DatabricksStruct((Map<String, Object>) element, elementType);

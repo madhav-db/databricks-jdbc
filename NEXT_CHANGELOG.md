@@ -9,6 +9,7 @@
 ### Updated
 
 ### Fixed
+- Fixed `NullPointerException` / `StringIndexOutOfBoundsException` in `MetadataParser` when fetching complex types with `EnableComplexDatatypeSupport=1` and the server returns a bare type name (`ARRAY`/`MAP`/`STRUCT`) without parameterized element/field types. The driver now falls back to inferring types from the JSON body instead of crashing.
 - Fixed `EnableBatchedInserts` silently falling back to individual execution when table or schema names contain special characters (e.g., hyphens) inside backtick-quoted identifiers. Added a warn log when the fallback occurs.
 - Fixed `IntervalConverter` crash (`IllegalArgumentException: Invalid interval metadata`) when INTERVAL columns are returned via CloudFetch. Arrow metadata from CloudFetch uses underscored format (`INTERVAL_YEAR_MONTH`, `INTERVAL_DAY_TIME`) which the driver's regex did not accept.
 - Fixed primitive types within complex types (ARRAY, MAP, STRUCT) not being correctly parsed when Arrow serialization uses alternate formats: TIMESTAMP/TIMESTAMP_NTZ as epoch microseconds or component arrays, and BINARY as base64-encoded strings.

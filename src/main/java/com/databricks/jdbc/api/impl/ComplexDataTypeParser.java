@@ -107,13 +107,16 @@ public class ComplexDataTypeParser {
     }
     LOGGER.debug("Parsing struct with metadata: {}", structMetadata);
     Map<String, String> fieldTypeMap = MetadataParser.parseStructMetadata(structMetadata);
+    // When the server did not populate parameterized field types (bare "STRUCT"), infer
+    // each field's type from the JSON node shape instead of defaulting every field to STRING.
+    String fallbackFieldType = fieldTypeMap.isEmpty() ? "" : DatabricksTypeUtil.STRING;
     Map<String, Object> structMap = new LinkedHashMap<>();
     Iterator<Map.Entry<String, JsonNode>> fields = node.fields();
     while (fields.hasNext()) {
       Map.Entry<String, JsonNode> entry = fields.next();
       String fieldName = entry.getKey();
       JsonNode fieldNode = entry.getValue();
-      String fieldType = fieldTypeMap.getOrDefault(fieldName, DatabricksTypeUtil.STRING);
+      String fieldType = fieldTypeMap.getOrDefault(fieldName, fallbackFieldType);
       Object convertedValue = convertValueNode(fieldNode, fieldType);
       structMap.put(fieldName, convertedValue);
     }
@@ -124,6 +127,12 @@ public class ComplexDataTypeParser {
       throws DatabricksParsingException {
     if (node == null || node.isNull()) {
       return null;
+    }
+    // Expected type can be empty when the server omitted parameterized complex-type metadata
+    // (e.g. TColumnDesc reports just ARRAY_TYPE and the arrow schema was not populated).
+    // Fall back to inferring types from the JSON node shape.
+    if (expectedType == null || expectedType.isEmpty()) {
+      return convertJsonNodeDynamic(node);
     }
     if (expectedType.startsWith(DatabricksTypeUtil.ARRAY)) {
       return parseToArray(node, expectedType);
@@ -156,6 +165,42 @@ public class ComplexDataTypeParser {
       return convertTimestampNtzArray(node);
     }
     return convertPrimitive(node.asText(), expectedType);
+  }
+
+  /**
+   * Infers the Java representation of a JSON node when no SQL type hint is available. Arrays become
+   * {@link DatabricksArray}, objects become {@link DatabricksStruct}, and primitives are mapped to
+   * their natural Java type (Number / Boolean / String). Used as a fallback for the case where the
+   * server returns bare complex-type metadata like {@code ARRAY} or {@code STRUCT} without element
+   * parameters.
+   */
+  private Object convertJsonNodeDynamic(JsonNode node) {
+    if (node == null || node.isNull()) {
+      return null;
+    }
+    if (node.isArray()) {
+      List<Object> list = new ArrayList<>();
+      for (JsonNode child : node) {
+        list.add(convertJsonNodeDynamic(child));
+      }
+      return new DatabricksArray(list, DatabricksTypeUtil.ARRAY);
+    }
+    if (node.isObject()) {
+      Map<String, Object> map = new LinkedHashMap<>();
+      Iterator<Map.Entry<String, JsonNode>> it = node.fields();
+      while (it.hasNext()) {
+        Map.Entry<String, JsonNode> entry = it.next();
+        map.put(entry.getKey(), convertJsonNodeDynamic(entry.getValue()));
+      }
+      return new DatabricksStruct(map, DatabricksTypeUtil.STRUCT);
+    }
+    if (node.isBoolean()) {
+      return node.booleanValue();
+    }
+    if (node.isNumber()) {
+      return node.numberValue();
+    }
+    return node.asText();
   }
 
   private Map<String, Object> convertJsonNodeToJavaMap(
@@ -339,7 +384,14 @@ public class ComplexDataTypeParser {
       if (node.isArray() && node.size() > 0 && node.get(0).has("key")) {
         String[] kv = new String[] {"STRING", "STRING"};
         if (mapMetadata != null && mapMetadata.startsWith(DatabricksTypeUtil.MAP)) {
-          kv = MetadataParser.parseMapMetadata(mapMetadata).split(",", 2);
+          String[] parsed = MetadataParser.parseMapMetadata(mapMetadata).split(",", 2);
+          // Only adopt the parsed key/value types when both halves are non-empty. Bare "MAP"
+          // metadata returns empty halves (server omitted parameterized types); in that case we
+          // keep the STRING/STRING default so quoting still matches the legacy disabled-complex
+          // path and we don't emit unquoted string keys/values.
+          if (parsed.length == 2 && !parsed[0].trim().isEmpty() && !parsed[1].trim().isEmpty()) {
+            kv = parsed;
+          }
         }
 
         String keyType = kv[0].trim();
