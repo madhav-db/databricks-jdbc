@@ -372,10 +372,10 @@ public class ComplexDataTypeParserTest {
   }
 
   /**
-   * Regression for ES-1526082: when the server returns a bare type name such as "ARRAY" without
-   * the element-type parameter, the driver used to crash with StringIndexOutOfBoundsException
-   * while trying to parse "ARRAY<...>". It must now fall back to dynamic JSON inference and
-   * return the expected values without throwing.
+   * Regression for ES-1526082: when the server returns a bare type name such as "ARRAY" without the
+   * element-type parameter, the driver used to crash with StringIndexOutOfBoundsException while
+   * trying to parse "ARRAY<...>". It must now fall back to dynamic JSON inference and return the
+   * expected values without throwing.
    */
   @Test
   void testParseJsonStringToDbArray_bareArrayMetadataStrings() throws DatabricksParsingException {
@@ -396,7 +396,8 @@ public class ComplexDataTypeParserTest {
   }
 
   @Test
-  void testParseJsonStringToDbArray_bareArrayMetadataNumbers() throws DatabricksParsingException {
+  void testParseJsonStringToDbArray_bareArrayMetadataNumbers()
+      throws DatabricksParsingException, SQLException {
     String json = "[1,2,3]";
 
     DatabricksArray dbArray = parser.parseJsonStringToDbArray(json, "ARRAY");
@@ -461,10 +462,10 @@ public class ComplexDataTypeParserTest {
   }
 
   /**
-   * Regression: formatMapString is used on the complex-types-disabled path. For bare "MAP"
-   * metadata it used to return the raw JSON (because parseMapMetadata threw and was swallowed by
-   * the outer catch). After relaxing parseMapMetadata, we must keep the STRING/STRING quoting
-   * default so string keys still get quoted correctly.
+   * Regression: formatMapString is used on the complex-types-disabled path. For bare "MAP" metadata
+   * it used to return the raw JSON (because parseMapMetadata threw and was swallowed by the outer
+   * catch). After relaxing parseMapMetadata, we must keep the STRING/STRING quoting default so
+   * string keys still get quoted correctly.
    */
   @Test
   void testFormatMapString_bareMapMetadataKeepsStringQuoting() {
